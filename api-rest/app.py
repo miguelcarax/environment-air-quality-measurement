@@ -1,12 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from flask import Flask
+from flask import Flask, jsonify
 from flask_api import status
-from config import *
+from flask_sqlalchemy import SQLAlchemy
+
+from config import Config
 
 app = Flask(__name__)
-
 app.config.from_object(Config())
+db = SQLAlchemy(app)
 
 
 @app.route('/')
@@ -15,12 +17,16 @@ def default():
     return content, status.HTTP_404_NOT_FOUND
 
 
-@app.route('/air_quality')
-def air_quality(options='GET'):
+@app.route('/air_quality', methods=['GET'])
+def air_quality():
     """
     Return air quality measurements as a JSON
     """
     # FIXME: Return real data, no dummy ;(
+
+    from models import AirQuality
+    print(AirQuality.query.all())
+
     content = \
         {
             'TimeInstant': '2016-10-01 00:00:00.004',
