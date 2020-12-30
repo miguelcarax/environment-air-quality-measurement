@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 from flask import Flask
 from flask_api import status
+from config import *
 
 app = Flask(__name__)
+
+app.config.from_object(Config())
 
 
 @app.route('/')
