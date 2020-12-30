@@ -1,0 +1,32 @@
+services:
+  api-rest:
+    image: miguelcarax/api-rest:0.1.0
+    build: api-rest
+    ports:
+      - "5000:5000"
+    networks:
+      - internal
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - POSTGRES_API_USER
+      - POSTGRES_API_PASSWORD
+      - POSTGRES_API_SCHEMA
+
+  postgres:
+    image: miguelcarax/postgres:13.1
+    build: postgres
+    networks:
+      - internal
+    environment:
+      - POSTGRES_PASSWORD
+      - POSTGRES_API_USER
+      - POSTGRES_API_PASSWORD
+      - POSTGRES_API_SCHEMA
+
+
+networks:
+  internal:
+
