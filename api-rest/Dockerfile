@@ -1,7 +1,4 @@
-FROM python:3.7
-
-ENV FLASK_APP       app.py
-ENV FLASK_RUN_HOST  0.0.0.0
+FROM python:3.8
 
 EXPOSE 5000
 
@@ -13,4 +10,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["flask", "run"]
+CMD ["python3", "app.py"]
