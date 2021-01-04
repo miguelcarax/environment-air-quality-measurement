@@ -1,18 +1,30 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from time import sleep
+
 from flask import Flask, jsonify
 from flask_api import status
-from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from config import Config
+from models import AirQuality
 
 app = Flask(__name__)
-app.config.from_object(Config())
-db = SQLAlchemy(app)
+app.config.from_object(Config)
+
+# Added some delay to let Postgres initialize some data
+sleep(1)
+engine = create_engine(Config.DATABASE_URI)
+# Define Session Factory for incoming requests
+Session = sessionmaker(bind=engine)
 
 
 @app.route('/')
 def default():
+    """
+    Default route for testing purpose
+    """
     content = {'Hey men!': 'Are you lost?'}
     return content, status.HTTP_404_NOT_FOUND
 
@@ -20,26 +32,14 @@ def default():
 @app.route('/air_quality', methods=['GET'])
 def air_quality():
     """
-    Return air quality measurements as a JSON
+    Return ALL air quality measurements as a JSON
     """
-    # FIXME: Return real data, no dummy ;(
+    session = Session()
+    measurements = session.query(AirQuality).all()
+    session.close()
 
-    from models import AirQuality
-    print(AirQuality.query.all())
-
-    content = \
-        {
-            'TimeInstant': '2016-10-01 00:00:00.004',
-            'id_entity': 'aq_salvia',
-            'so2': 6.80117094260474,
-            'no2': 48.398337879833704,
-            'co': 0.657363926741451,
-            'o3': 48.49706558445371,
-            'pm10': 20.1015302324903,
-            'pm2_5': 9.137353903174679
-        }
-    return content, status.HTTP_200_OK
+    return jsonify([measurement.to_dict() for measurement in measurements]), status.HTTP_200_OK
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0')
