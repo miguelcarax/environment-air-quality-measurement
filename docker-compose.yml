@@ -3,10 +3,12 @@ services:
     image: miguelcarax/api-rest:0.1.0
     build: api-rest
     container_name: api-rest
+    # FIXME: Do not expose any port
     ports:
-      - "5000:5000"
+      - "5005:5000"
     networks:
       - internal
+      - external
     depends_on:
       - postgres
     environment:
@@ -28,7 +30,30 @@ services:
       - POSTGRES_API_PASSWORD
       - POSTGRES_API_SCHEMA
 
+  api-cache:
+    image: miguelcarax/api-cache:0.1.0
+    build: api-cache
+    container_name: api-cache
+    ports:
+      - "5000:5000"
+    depends_on:
+      - api-rest
+      - redis
+    networks:
+      - external
+    environment:
+      - REDIS_HOST
+      - REDIS_PORT
+      - REDIS_PASSWORD
+      - BACKEND_HOST
+      - BACKEND_PORT
+
+  redis:
+    image: redis:6
+    networks:
+      - external
+
 
 networks:
   internal:
-
+  external:
