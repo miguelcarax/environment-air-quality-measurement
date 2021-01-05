@@ -13,8 +13,6 @@ from models import AirQuality
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Added some delay to let Postgres initialize some data
-sleep(1)
 engine = create_engine(Config.DATABASE_URI)
 # Define Session Factory for incoming requests
 Session = sessionmaker(bind=engine)
