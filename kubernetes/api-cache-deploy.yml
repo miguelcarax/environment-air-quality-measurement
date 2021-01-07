@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: api-cache
+  name: api-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-cache
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: api-cache
+    spec:
+      containers:
+      - image: miguelcarax/api-cache:0.1.0
+        name: api-cache
+        envFrom:
+        - secretRef:
+            name: credentials
+        resources: {}
