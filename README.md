@@ -83,13 +83,30 @@ The stack is designed to be securely deployed with all the needed credentials wi
 
 
 
+### CI/CD
+
+In order to be able to do a Continuous Integration workflow we'll need a CI/CD tool like Travis or Jenkins. We can take 2 approaches, the first one is to add a Jenkinsfile, in the case we use Jenkins, that defines all the Jobs that our application will go through after the interaction with the VCS, in the other case we can configure the Jobs directly from the Jenkins server. An example workflow could be:
+
+1. We push our `feature` branch to the VCS server
+2. Jenkins will run a PyLint job to the Python code, in the case of the API REST application
+3. Jenkins will run different unit test against the code
+4. If everything goes OK Jenkins merge the `feature` branch with the `develop` branch
+5. Jenkins will run different integration test against the code
+6. If everything goes OK and Continuous Deployment its enabled the code will be deployed to the UAT environment
+
+
+
+We should configure in Jenkins the differents kubeconfigs and needed credentials to deploy in the our different Kubernetes environment based on the branches we push
+
+
+
 ### Monitoring, logging and backup
 
 #### Monitoring
 
-This can be taken by different approaches because of the different frameworks in this field. Our option is Prometheus, we can export a `/metrics` endpoint in both `api-cache` and `api-rest` applications, this exported metrics could be later be collected by Prometheus and graphed in a monitoring tool like Grafana. This approach lets us to scale up and down the application without the need of any sync between the Prometheus server and differentet application replicas deployed.
+Our option is Prometheus, we can export a `/metrics` endpoint in both `api-cache` and `api-rest` applications, this exported metrics could be later be collected by Prometheus and graphed in a monitoring tool like Grafana. This approach lets us to scale up and down the application without the need of any sync between the Prometheus server and differentet application replicas deployed.
 
-The Prometheus options is also a good options there's a bunch of exporters related to Kubernetes that allows us to monitoring the differente Kubernetes components.
+The Prometheus option has a bunch of exporters related to Kubernetes that allows us to monitoring the differente Kubernetes components and also allows us to configure alerts based on metrics to have a 24x7 knowledge of our platform behaviour
 
 
 
