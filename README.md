@@ -1,12 +1,14 @@
 # Environment Air Quailty Measurement
 
-[TOC]
 
-## Design Decissions
+
+## Design Decisions
 
 ### API 
 
-The backend API is implemented in Python 3.8 with Flask, which is a plug-n-play micro-framework for web application development. This app exposes an API REST (port 5000 by default) endpoint, `/air_quality` which returns a well-formed JSON with all all the data stored in the Postgres database (will be commented later). It also has a `/` endpoint enabled for testing purpose. This app is completetly stateless  so it can be scaled up and down without any restriction.
+The backend API is implemented in Python 3.8 with Flask, which is a plug-n-play micro-framework for web application development. This app exposes an API REST (port 5000 by default) endpoint, `/air_quality` which returns a well-formed JSON with all all the data stored in the Postgres database (will be commented later). It also has a `/` endpoint enabled for testing purpose. This app is completetly stateless and isolated, so it can be scaled up and down without any restriction.
+
+The application has a `config.py` file which contains all the configuration related to the application. This configuration should be differente between environments, later we'll discuss how to manage this configuration. There's also a `models.py` configuration file which contains the data model of the Postgres table queried by the application.
 
 This application is served alongside a Dockerfile and a `requirements.txt` file for propertly build the application for Cloud Native environments.
 
@@ -14,7 +16,7 @@ This application is served alongside a Dockerfile and a `requirements.txt` file 
 
 ### Cache
 
-This app, like the one before commented is also developed in Python 3.8 with Flask. This cache acts as a frontend for the real API, it doesn't do any work at wall, it acepts any HTTP GET request, if there is a cached response JSON  for the queried endpoint it serves the cached data otherwise it redirects the request to the API backend which will query postgres for the data. The flow is the next:
+This app, like the one before commented is also developed in Python 3.8 with Flask. This cache acts as a frontend for the real API, it doesn't do any work at all, it acepts any HTTP GET request, if there is a cached response JSON for the queried endpoint it serves the cached data otherwise it redirects the request to the API backend which will query postgres for the data. The flow is the next:
 
 
 
@@ -22,25 +24,25 @@ This app, like the one before commented is also developed in Python 3.8 with Fla
 
 
 
-1. The cache accept a HTTP request to the `/air_quality` endpoint
+1. The cache accepts a HTTP request to the `/air_quality` endpoint (or any other)
 2. The cache checks if there's already a cached version of the response JSON
-   1. If there is a cache miss, the cache will query the API backend for the necessary data, and save the data in the cache for further requests
+   1. If there is a cache miss, the cache will query the API backend for the necessary data, and save the data in the cache for next requests
    2. If there is a cache hit the data will be served from the cache
 3. The data is returned to the client
 
 A Redis instance it's deployed with the cache app as a lightning-fast cache database for storing the response JSONs
 
-Like the API backend app, the cache app has beend served alongside a Dockerfile and a `requirements.txt` file for propertly build the application for Cloud Native environments
+Like the API backend app, the cache app has beend served alongside a Dockerfile and a `requirements.txt` file for propertly build the application for Cloud Native environments. There's also a `config.py` file for this application for configuration management.
 
 #### Cache data model
 
-The data model for the cached has been simplified for the purpose of the application. The way it deals with stale data it's through a expiration time for the stored data (the cached one), it's configured to store the stored data, the list of JSON with the air quality measurements for only 30s, so every 30 seconds no matter the data it's queried or not it will expire and the next request will force the cache to query the data from API backend. This data model does not guarantee consistency against the final data (Postgres). The key for the data stored in Redis is a `hash()` of the URL endpoint of the HTTP request, `/air_quality` in this case, this way we assure that there's a unique entry in Redis for each GET request.
+The data model for the cache has been simplified for the purpose of the application. The way it deals with stale data it's through a expiration time for the stored data (the cached one). It's configured to store the list of JSON with the air quality measurements for only 30s, so every 30 seconds no matter the data it's queried or not it will expire and the next request will force the cache to query the data from API backend. This data model does not guarantee consistency against the final data (Postgres). The key for the data stored in Redis is a `hash()` of the URL endpoint of the HTTP request, `/air_quality` in this case, this way we assure that there's a unique entry in Redis for each HTTP GET request.
 
 
 
 ### Database
 
-The relational database choose for the application it's Postgres. The way the data needed for the API it's initialized is through a native mechanism in the Postgres official docker image. It allows the user to upload a `init-script.sh` script to the containerized application for data initilization. This `init-script.sh` file is responsible for creating a schema and a table for the `air_quality_measurements` data (the `.csv` file in the `postgres` directory), also it creates an user/password credentials for querying this table. 
+The relational database choosen for the application it's Postgres. The way the data needed for the API it's initialized is through a native mechanism in the Postgres official docker image. It allows the user to upload a `init-script.sh` script to the containerized application for data initilization. This `init-script.sh` file is responsible for creating a schema and a table for the `air_quality_measurements` data (the `.csv` file in the `postgres` directory), also it creates an user/password credentials for querying this table. 
 
 The table schema is the next:
 
@@ -81,6 +83,28 @@ The stack is designed to be securely deployed with all the needed credentials wi
 
 
 
+### Monitoring, logging and backup
+
+#### Monitoring
+
+This can be taken by different approaches because of the different frameworks in this field. Our option is Prometheus, we can export a `/metrics` endpoint in both `api-cache` and `api-rest` applications, this exported metrics could be later be collected by Prometheus and graphed in a monitoring tool like Grafana. This approach lets us to scale up and down the application without the need of any sync between the Prometheus server and differentet application replicas deployed.
+
+The Prometheus options is also a good options there's a bunch of exporters related to Kubernetes that allows us to monitoring the differente Kubernetes components.
+
+
+
+#### Logging
+
+Here we can use a framework like Fluentd or Logstash (or Beats) for the agent-side. For the server-side we can use ElasticSearch for storing the logs and Kibana as UI frontend for querying the data. At the moment our application does not log any custom log (only the Flask framework ones), but we can add some features to the `api-N` applications to log anything we want.
+
+
+
+#### Backup
+
+The options here are limited to the platform where the application will be deployed. The easiest way to do this is to use Kubernetes Persistent Volumes backed by, for example, AWS EBS that will assure us no data loss. Other approach, in case we use a on-premise fully-managed platform is to use RAID 1 for servers disks. 
+
+This point will not metion the problems associated for deploying a statefull application like Postgres or redis in a stateless-oriented environment like Kubernetes.
+
 
 
 ## Deployment
@@ -94,7 +118,8 @@ In the root directory there is a `docker-compose.yml` file that will deploy all 
 The steps for deploying in Docker are the next:
 
 ```bash
-# Assign values for POSTGRES_PASSWORD and POSTGRES_API_PASSWORD variables in the environment.env file
+# Assign values for POSTGRES_PASSWORD and POSTGRES_API_PASSWORD variables in the 
+#		environment.env file
 $ vi environment.env
 ...
 # Load all the environment variables from environment.env
@@ -124,13 +149,15 @@ Considerations:
 The steps for deploying in Kubernetes are the next:
 
 ```bash
-# In this case we will deploy the stack in Kubernetes-for-Mac but it should work in other Kubernetes like Minikube, k3s, kind, etc
-# Assign values for POSTGRES_PASSWORD and POSTGRES_API_PASSWORD variables in the environment.env file
+# In this case we will deploy the stack in Kubernetes-for-Mac but it should work 
+# 	in other Kubernetes like Minikube, k3s, kind, etc
+# Assign values for POSTGRES_PASSWORD and POSTGRES_API_PASSWORD variables in the 
+# 	environment.env file
 $ vi environment.env
 ...
 # Build the docker images
 $ docker-compose build
-# Create the Secret object
+# Create the Secret object out of the environment variables set before
 $ kubectl create secret generic credentials --from-env-file=environment.env
 # Deploy all the stack
 $ kubectl apply -f kubernetes/
@@ -145,3 +172,20 @@ $ kubectl delete secret credentials
 
 
 
+## How the hell do I know if this works?
+
+If you deploy the application through the `docker-compose` provided and query the  `/air_quality` endpoint twice, you will notice that at first, both `api-rest` and `api-cache` serve content, but the second time you query the endpoint only the `api-cache` serves cotent, because de response JSON is already cached in Redis. If you wait more than 30 seconds and query again the endpoint the content will be served again from both `api-cache` and `api-rest` because of the default expiration time of 30 seconds of the content in Redis
+
+```
+...
+api-cache    | 172.23.0.1 - - [08/Jan/2021 16:02:33] "GET / HTTP/1.1" 404 -
+api-rest     | 172.23.0.4 - - [08/Jan/2021 16:02:38] "GET /air_quality HTTP/1.1" 200 -
+api-cache    | 172.23.0.1 - - [08/Jan/2021 16:02:38] "GET /air_quality HTTP/1.1" 200 -
+api-cache    | 172.23.0.1 - - [08/Jan/2021 16:02:40] "GET /air_quality HTTP/1.1" 200 -
+...
+api-rest     | 172.23.0.4 - - [08/Jan/2021 16:05:26] "GET /air_quality HTTP/1.1" 200 -
+api-cache    | 172.23.0.1 - - [08/Jan/2021 16:05:26] "GET /air_quality HTTP/1.1" 200 -
+...
+```
+
+ 
