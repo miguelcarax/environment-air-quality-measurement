@@ -137,6 +137,8 @@ The steps for deploying in Docker are the next:
 ```bash
 # Assign values for POSTGRES_PASSWORD and POSTGRES_API_PASSWORD variables in the 
 #		environment.env file
+# You can generate a random password with
+# $ cat /dev/urandom | base64 - | head -c 16
 $ vi environment.env
 ...
 # Load all the environment variables from environment.env
@@ -170,6 +172,8 @@ The steps for deploying in Kubernetes are the next:
 # 	in other Kubernetes like Minikube, k3s, kind, etc
 # Assign values for POSTGRES_PASSWORD and POSTGRES_API_PASSWORD variables in the 
 # 	environment.env file
+# You can generate a random password with
+# $ cat /dev/urandom | base64 - | head -c 16
 $ vi environment.env
 ...
 # Build the docker images
@@ -206,3 +210,16 @@ api-cache    | 172.23.0.1 - - [08/Jan/2021 16:05:26] "GET /air_quality HTTP/1.1"
 ```
 
  
+
+## TODO
+
++ Add real Jenkinsfile for CI/CD pipelines
++ Add credentials for Redis
++ Add TLS for obvious security reasons
++ Add persitence for data in Kubernetes deployment (PV)
++ Add readiness and liveness probes for Kubernetes Pods
++ Add some custom logging for `api-XXXX` apps
++ Add real monitoring for both platform and applications
++ Add some Kubernetes Ingress thing (KubeDNS + Traefik) for properly frontend
++ Think a better way to deal with stale data in Redis
++ Add more information about networking design
