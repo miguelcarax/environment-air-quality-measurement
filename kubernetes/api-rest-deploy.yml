@@ -5,7 +5,7 @@ metadata:
     app: api-rest
   name: api-rest
 spec:
-  replicas: 1
+  replicas: 5
   selector:
     matchLabels:
       app: api-rest
