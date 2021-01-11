@@ -223,3 +223,4 @@ api-cache    | 172.23.0.1 - - [08/Jan/2021 16:05:26] "GET /air_quality HTTP/1.1"
 + Add some Kubernetes Ingress thing (KubeDNS + Traefik) for properly frontend
 + Think a better way to deal with stale data in Redis
 + Add more information about networking design
++ Add resource limits for Kubernetes Pods
