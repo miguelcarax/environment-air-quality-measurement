@@ -6,17 +6,17 @@
 
 ### API 
 
-The backend API is implemented in Python 3.8 with Flask, which is a plug-n-play micro-framework for web application development. This app exposes an API REST (port 5000 by default) endpoint, `/air_quality` which returns a well-formed JSON with all all the data stored in the Postgres database (will be commented later). It also has a `/` endpoint enabled for testing purpose. This app is completetly stateless and isolated, so it can be scaled up and down without any restriction.
+The backend API is implemented in Python 3.8 with Flask, which is a plug-n-play micro-framework for web application development. This app exposes an API REST (port 5000 by default) endpoint, `/air_quality` which returns a well-formed JSON with all all the data stored in the Postgres database (will be commented later). It also has a `/` endpoint enabled for testing purpose. This app is completely stateless and isolated, so it can be scaled up and down without any restriction.
 
-The application has a `config.py` file which contains all the configuration related to the application. This configuration should be differente between environments, later we'll discuss how to manage this configuration. There's also a `models.py` configuration file which contains the data model of the Postgres table queried by the application.
+The application has a `config.py` file which contains all the configuration related to the application. This configuration should be different between environments, later we'll discuss how to manage this configuration. There's also a `models.py` configuration file which contains the data model of the Postgres table queried by the application.
 
-This application is served alongside a Dockerfile and a `requirements.txt` file for propertly build the application for Cloud Native environments.
+This application is served alongside a Dockerfile and a `requirements.txt` file for properly build the application for Cloud Native environments.
 
 
 
 ### Cache
 
-This app, like the one before commented is also developed in Python 3.8 with Flask. This cache acts as a frontend for the real API, it doesn't do any work at all, it acepts any HTTP GET request, if there is a cached response JSON for the queried endpoint it serves the cached data otherwise it redirects the request to the API backend which will query postgres for the data. The flow is the next:
+This app, like the one before commented is also developed in Python 3.8 with Flask. This cache acts as a frontend for the real API, it doesn't do any work at all, it accepts any HTTP GET request, if there is a cached response JSON for the queried endpoint it serves the cached data otherwise it redirects the request to the API backend which will query postgres for the data. The flow is the next:
 
 
 
@@ -32,17 +32,17 @@ This app, like the one before commented is also developed in Python 3.8 with Fla
 
 A Redis instance it's deployed with the cache app as a lightning-fast cache database for storing the response JSONs
 
-Like the API backend app, the cache app has beend served alongside a Dockerfile and a `requirements.txt` file for propertly build the application for Cloud Native environments. There's also a `config.py` file for this application for configuration management.
+Like the API backend app, the cache app has been served alongside a Dockerfile and a `requirements.txt` file for properly build the application for Cloud Native environments. There's also a `config.py` file for this application for configuration management.
 
 #### Cache data model
 
-The data model for the cache has been simplified for the purpose of the application. The way it deals with stale data it's through a expiration time for the stored data (the cached one). It's configured to store the list of JSON with the air quality measurements for only 30s, so every 30 seconds no matter the data it's queried or not it will expire and the next request will force the cache to query the data from API backend. This data model does not guarantee consistency against the final data (Postgres). The key for the data stored in Redis is a `hash()` of the URL endpoint of the HTTP request, `/air_quality` in this case, this way we assure that there's a unique entry in Redis for each HTTP GET request.
+The data model for the cache has been simplified for the purpose of the application. The way it deals with stale data it's through an expiration time for the stored data (the cached one). It's configured to store the list of JSON with the air quality measurements for only 30s, so every 30 seconds no matter the data it's queried or not it will expire and the next request will force the cache to query the data from API backend. This data model does not guarantee consistency against the final data (Postgres). The key for the data stored in Redis is a `hash()` of the URL endpoint of the HTTP request, `/air_quality` in this case, this way we assure that there's a unique entry in Redis for each HTTP GET request.
 
 
 
 ### Database
 
-The relational database choosen for the application it's Postgres. The way the data needed for the API it's initialized is through a native mechanism in the Postgres official docker image. It allows the user to upload a `init-script.sh` script to the containerized application for data initilization. This `init-script.sh` file is responsible for creating a schema and a table for the `air_quality_measurements` data (the `.csv` file in the `postgres` directory), also it creates an user/password credentials for querying this table. 
+The relational database chosen for the application it's Postgres. The way the data needed for the API it's initialized is through a native mechanism in the Postgres official docker image. It allows the user to upload a `init-script.sh` script to the containerized application for data initialization. This `init-script.sh` file is responsible for creating a schema and a table for the `air_quality_measurements` data (the `.csv` file in the `postgres` directory), also it creates an user/password credentials for querying this table. 
 
 The table schema is the next:
 
@@ -59,7 +59,7 @@ The table schema is the next:
 
 
 
-No further modifications has been added to the official Postgres docker image.
+No further modifications have been added to the official Postgres docker image.
 
 
 
@@ -85,18 +85,18 @@ The stack is designed to be securely deployed with all the needed credentials wi
 
 ### CI/CD
 
-In order to be able to do a Continuous Integration workflow we'll need a CI/CD tool like Travis or Jenkins. We can take 2 approaches, the first one is to add a Jenkinsfile, in the case we use Jenkins, that defines all the Jobs that our application will go through after the interaction with the VCS, in the other case we can configure the Jobs directly from the Jenkins server. An example workflow could be:
+In order to be able to do a Continuous Integration workflow we'll need a CI/CD tool like Travis or Jenkins. We can take two approaches, the first one is to add a Jenkinsfile, in the case we use Jenkins, that defines all the Jobs that our application will go through after the interaction with the VCS, in the other case we can configure the Jobs directly from the Jenkins server. An example workflow could be:
 
 1. We push our `feature` branch to the VCS server
 2. Jenkins will run a PyLint job to the Python code, in the case of the API REST application
-3. Jenkins will run different unit test against the code
+3. Jenkins will run different unit tests against the code
 4. If everything goes OK Jenkins merge the `feature` branch with the `develop` branch
 5. Jenkins will run different integration test against the code
 6. If everything goes OK and Continuous Deployment its enabled the code will be deployed to the UAT environment
 
 
 
-We should configure in Jenkins the differents kubeconfigs and needed credentials to deploy in the our different Kubernetes environment based on the branches we push
+We should configure in Jenkins the differents kubeconfigs and needed credentials to deploy in our different Kubernetes environment based on the branches we push
 
 
 
@@ -104,9 +104,9 @@ We should configure in Jenkins the differents kubeconfigs and needed credentials
 
 #### Monitoring
 
-Our option is Prometheus, we can export a `/metrics` endpoint in both `api-cache` and `api-rest` applications, this exported metrics could be later be collected by Prometheus and graphed in a monitoring tool like Grafana. This approach lets us to scale up and down the application without the need of any sync between the Prometheus server and differentet application replicas deployed.
+Our option is Prometheus, we can export a `/metrics` endpoint in both `api-cache` and `api-rest` applications, this exported metrics could be later be collected by Prometheus and graphed in a monitoring tool like Grafana. This approach lets us to scale up and down the application without the need of any sync between the Prometheus server and different application replicas deployed.
 
-The Prometheus option has a bunch of exporters related to Kubernetes that allows us to monitoring the differente Kubernetes components and also allows us to configure alerts based on metrics to have a 24x7 knowledge of our platform behaviour
+The Prometheus option has a bunch of exporters related to Kubernetes that allows us to monitoring the different Kubernetes components and also allows us to configure alerts based on metrics to have a 24x7 knowledge of our platform behaviour.
 
 
 
@@ -118,7 +118,7 @@ Here we can use a framework like Fluentd or Logstash (or Beats) for the agent-si
 
 #### Backup
 
-The options here are limited to the platform where the application will be deployed. The easiest way to do this is to use Kubernetes Persistent Volumes backed by, for example, AWS EBS that will assure us no data loss. Other approach, in case we use a on-premise fully-managed platform is to use RAID 1 for servers disks. 
+The options here are limited to the platform where the application will be deployed. The easiest way to do this is to use Kubernetes Persistent Volumes backed by, for example, AWS EBS that will assure us no data loss. Other approach, in case we use a on-premise fully managed platform is to use RAID 1 for servers disks. 
 
 This point will not metion the problems associated for deploying a statefull application like Postgres or redis in a stateless-oriented environment like Kubernetes.
 
@@ -126,7 +126,7 @@ This point will not metion the problems associated for deploying a statefull app
 
 ## Deployment
 
-The stack is designed to be able to be deployed both locally with Docker and distributed with Kubernetes. We'll be discuss the two options
+The stack is designed to be able to be deployed both locally with Docker and distributed with Kubernetes. We'll be discussing the two options
 
 ### Docker
 
@@ -162,7 +162,7 @@ In the root directory there is a `kubernetes/` directory which contains all the 
 Considerations:
 
 + This deployment will NOT work on a real environment because the Docker images needed for the stack are build and located locally. For real environment the images should be published in a private/public registry
-+ Is REQUIRED to deploy the Secret object before the stack deployment. This secret object contains all the environment variables needed for the properly operation of the stack.
++ Is REQUIRED to deploy the Secret object before the stack deployment. This secret object contains all the environment variables needed for the proper operation of the stack.
 + There's no data persistence between executions. If there's a real need for persistence of the stored data (redis, postgres) you should use Persistent Volumes or implement other solution.
 
 The steps for deploying in Kubernetes are the next:
